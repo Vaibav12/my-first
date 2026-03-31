@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dark Theme Music Player</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<style>
+body, html {
+  height: 100%;
+  margin: 0;
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(135deg, #0f0f0f, #181818);
+  color: #eee;
+  overflow: hidden;
+}
+
+#container {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+#bigSongDisplay {
+  width: 30%;
+  background: #0f0f0f;
+  box-shadow: 0 0 30px rgba(29, 185, 84, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  transition: all 0.4s cubic-bezier(.25,.8,.25,1);
+  z-index: 2;
+}
+
+#bigSongDisplay.hidden {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+#bigCover {
+  width: 100%;
+  max-height: 60vh;
+  border-radius: 15px;
+  object-fit: cover;
+  box-shadow: 0 0 50px rgba(29, 185, 84, 0.7);
+  transition: all 0.3s ease;
+}
+
+#bigTitle {
+  margin-top: 15px;
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-align: center;
+  background: linear-gradient(45deg, #1db954, #10ac84);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 8px rgba(29, 185, 84, 0.8);
+}
+
+#playerControls {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  gap: 25px;
+}
+
+#playerControls button {
+  background: transparent;
+  border: none;
+  color: #1db954;
+  font-size: 2.3rem;
+  cursor: pointer;
+  transition: all 0.2s ease, transform 0.2s;
+}
+
+#playerControls button:hover {
+  color: #1ed760;
+  transform: scale(1.2);
+}
+
+#exitBtn {
+  font-size: 2.5rem;
+  color: #e53935;
+}
+
+#exitBtn:hover {
+  color: #ff6e6e;
+  transform: scale(1.3);
+}
+
+#bigAudio {
+  width: 100%;
+  margin-top: 25px;
+  outline: none;
+  border-radius: 8px;
+  box-shadow: 0 0 25px rgba(29, 185, 84, 0.5);
+}
+
+/* List of songs, in a vertical column, no side by side, full scrollable */
+#songList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+  background: #121212;
+  transition: margin-left 0.4s ease;
+}
+
+#songList.shifted {
+  margin-left: 30%;
+}
+
+/* List item styles: big image, text, hover glow */
+.songItem {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid #222;
+  transition: background 0.3s, box-shadow 0.3s, border-left 0.3s;
+  border-left: 4px solid transparent;
+}
+
+.songItem:hover {
+  background: #1a1a1a;
+  border-left: 4px solid #1db954;
+  box-shadow: inset 5px 0 10px #1db95444;
+}
+
+.songImg {
+  width: 70px;
+  height: 70px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 0 12px rgba(29, 185, 84, 0.4);
+  transition: scale 0.2s, box-shadow 0.2s;
+}
+
+.songItem:hover .songImg {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(29, 185, 84, 0.8);
+}
+
+.songTitle {
+  margin-left: 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.song-duration {
+  margin-left: auto;
+  font-size: 1em;
+  color: #aee;
+  background: #232323;
+  border-radius: 7px;
+  padding: 2px 12px;
+  font-family: "Roboto Mono", monospace;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+  box-shadow: 0 0 5px #1db95422;
+}
+
+
+/* Responsive scrollbar (buttons and hover glow) for insets */
+@media(max-width: 768px) {
+  #bigTitle { font-size: 1.3rem; }
+  #playerControls { gap: 15px; }
+  #playerControls button { font-size: 1.8rem; }
+  .songItem { padding: 10px 15px; }
+  .songImg { width: 60px; height: 60px; }
+  #bigCover { max-height: 50vh; }
+}
+</style>
+</head>
+<body>
+
+<div id="container">
+  <!-- Now Playing Panel -->
+  <div id="bigSongDisplay" class="hidden" aria-live="polite" aria-atomic="true" role="region">
+    <img id="bigCover" src="" alt="Album cover" />
+    <div id="bigTitle"></div>
+    <div id="playerControls" aria-label="Player controls">
+      <button id="prevBtn" title="Previous" aria-label="Previous song">&#9664;</button>
+      <button id="playPauseBtn" title="Play/Pause" aria-label="Play or pause">&#9658;</button>
+      <button id="nextBtn" title="Next" aria-label="Next song">&#9654;</button>
+      <button id="exitBtn" title="Exit Full Screen" aria-label="Exit player full screen">&times;</button>
+    </div>
+    <audio id="bigAudio" controls aria-label="Audio player">
+      <source src="" type="audio/mpeg" />
+      Your browser does not support the audio element.
+    </audio>
+  </div>
+
+  <!-- Song List -->
+  <div id="songList" tabindex="0" aria-label="Song list" role="list">
+    <!-- Songs are dynamically added here -->
+  </div>
+</div>
+
+<script>
+  // Real popular song titles and durations for demo (replace, sample URLs re-used)
+  const songs = [
+    { title: "Blinding Lights", duration: "3:22", img: "https://picsum.photos/id/101/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+    { title: "Shape of You", duration: "4:24", img: "https://picsum.photos/id/102/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+    { title: "Levitating", duration: "3:23", img: "https://picsum.photos/id/103/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+    { title: "Uptown Funk", duration: "4:30", img: "https://picsum.photos/id/104/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+    { title: "Bad Guy", duration: "3:14", img: "eminem.jpg", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" },
+    { title: "Senorita", duration: "3:11", img: "https://picsum.photos/id/106/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3" },
+    { title: "Dance Monkey", duration: "3:29", img: "https://picsum.photos/id/107/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3" },
+    { title: "Old Town Road", duration: "2:37", img: "https://picsum.photos/id/108/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" },
+    { title: "Rockstar", duration: "3:38", img: "https://picsum.photos/id/109/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3" },
+    { title: "Believer", duration: "3:24", img: "https://picsum.photos/id/110/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" },
+    { title: "Havana", duration: "3:37", img: "https://picsum.photos/id/111/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3" },
+    { title: "Closer", duration: "4:05", img: "https://picsum.photos/id/112/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3" },
+    { title: "Someone You Loved", duration: "3:03", img: "https://picsum.photos/id/113/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3" },
+    { title: "Shallow", duration: "3:37", img: "https://picsum.photos/id/114/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3" },
+    { title: "Perfect", duration: "4:23", img: "https://picsum.photos/id/115/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3" },
+    { title: "Sunflower", duration: "2:38", img: "https://picsum.photos/id/116/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3" },
+    { title: "Girls Like You", duration: "3:56", img: "https://picsum.photos/id/117/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+    { title: "Lucid Dreams", duration: "3:59", img: "https://picsum.photos/id/118/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+    { title: "God's Plan", duration: "3:18", img: "https://picsum.photos/id/119/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+    { title: "Memories", duration: "3:09", img: "https://picsum.photos/id/120/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+    { title: "Thank U, Next", duration: "3:27", img: "https://picsum.photos/id/121/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" },
+    { title: "Don't Start Now", duration: "3:03", img: "https://picsum.photos/id/122/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3" },
+    { title: "Sicko Mode", duration: "5:12", img: "https://picsum.photos/id/123/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3" },
+    { title: "Stressed Out", duration: "3:22", img: "https://picsum.photos/id/124/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" },
+    { title: "Happier", duration: "3:34", img: "https://picsum.photos/id/125/200/200", audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3" }
+  ];
+
+  const songListDiv = document.getElementById('songList');
+  const bigDisplay = document.getElementById('bigSongDisplay');
+  const bigCover = document.getElementById('bigCover');
+  const bigTitle = document.getElementById('bigTitle');
+  const bigAudio = document.getElementById('bigAudio');
+  const playBtn = document.getElementById('playPauseBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const exitBtn = document.getElementById('exitBtn');
+
+  let currentIdx = null;
+  let isPlaying = false;
+
+  // Generate song list
+  songListDiv.innerHTML = ''; // clear just in case
+  songs.forEach((song, index) => {
+    const div = document.createElement('div');
+    div.className = 'songItem';
+    div.dataset.index = index;
+    div.setAttribute('role', 'listitem');
+    div.setAttribute('tabindex', '0');
+    div.setAttribute('aria-label', song.title);
+
+    const img = document.createElement('img');
+    img.src = song.img;
+    img.className = 'songImg';
+    img.alt = `${song.title} album cover`;
+
+    const title = document.createElement('div');
+    title.className = 'songTitle';
+    title.textContent = song.title;
+
+    const duration = document.createElement('span');
+    duration.className = 'song-duration';
+    duration.textContent = song.duration;
+
+    div.appendChild(img);
+    div.appendChild(title);
+    div.appendChild(duration);
+    div.onclick = () => showSong(index);
+    div.onkeypress = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        showSong(index);
+      }
+    };
+
+    songListDiv.appendChild(div);
+  });
+
+  function showSong(index) {
+    currentIdx = index;
+    const song = songs[index];
+
+    bigCover.src = song.img;
+    bigTitle.textContent = song.title;
+    bigAudio.src = song.audio;
+    bigAudio.load();
+    bigAudio.play();
+    isPlaying = true;
+    updatePlayPauseBtn();
+
+    if (bigDisplay.classList.contains('hidden')) {
+      bigDisplay.classList.remove('hidden');
+      songListDiv.classList.add('shifted');
+    }
+  }
+
+  function updatePlayPauseBtn() {
+    playBtn.textContent = isPlaying ? '⏸' : '▶';
+  }
+
+  playBtn.onclick = () => {
+    if (isPlaying) {
+      bigAudio.pause();
+    } else if (currentIdx !== null) {
+      bigAudio.play();
+    }
+    isPlaying = !isPlaying;
+    updatePlayPauseBtn();
+  };
+
+  prevBtn.onclick = () => {
+    if (currentIdx !== null) {
+      currentIdx = (currentIdx - 1 + songs.length) % songs.length;
+      showSong(currentIdx);
+    }
+  };
+  nextBtn.onclick = () => {
+    if (currentIdx !== null) {
+      currentIdx = (currentIdx + 1) % songs.length;
+      showSong(currentIdx);
+    }
+  };
+
+  exitBtn.onclick = () => {
+    bigDisplay.classList.add('hidden');
+    songListDiv.classList.remove('shifted');
+    bigAudio.pause();
+    currentIdx = null;
+    isPlaying = false;
+    updatePlayPauseBtn();
+  };
+
+  bigAudio.onplay = () => {
+    isPlaying = true;
+    updatePlayPauseBtn();
+  };
+
+  bigAudio.onpause = () => {
+    isPlaying = false;
+    updatePlayPauseBtn();
+  };
+
+  bigAudio.onended = () => {
+    nextBtn.click();
+  };
+</script>
+
+
+</body>
+</html>
